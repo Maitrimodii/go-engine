@@ -44,41 +44,68 @@ func ValidatePort(context map[string]interface{}) int {
 
 // ValidateTimeOut returns the timeout from context or default
 func ValidateTimeOut(context map[string]interface{}) time.Duration {
+
 	if timeout, ok := context["timeout"].(float64); ok && timeout > 0 {
 		return time.Duration(timeout) * time.Second
 	}
+
 	return 10 * time.Second // Default timeout
 }
 
 // ErrorHandler creates an error map
 func ErrorHandler(code, message string) map[string]interface{} {
+
 	return map[string]interface{}{
 		"code":    code,
 		"message": message,
 	}
+
 }
 
 // Decode parses JSON context
-func Decode(input string) ([]map[string]interface{}, error) {
-	var contexts []map[string]interface{}
-	if err := json.Unmarshal([]byte(input), &contexts); err != nil {
+func Decode(input string) (*Input, error) {
+	var result Input
+
+	if err := json.Unmarshal([]byte(input), &result); err != nil {
 		return nil, err
 	}
-	return contexts, nil
+
+	if result.RequestType == "" {
+		return nil, fmt.Errorf("missing requestType")
+	}
+
+	if len(result.Contexts) == 0 {
+		return nil, fmt.Errorf("missing contexts")
+	}
+
+	return &result, nil
+}
+
+// Input struct to match the new JSON structure
+type Input struct {
+	RequestType string `json:"requestType"`
+
+	Contexts []map[string]interface{} `json:"contexts"`
 }
 
 // Encode
 func Encode(results []map[string]interface{}) (string, error) {
 	data, err := json.MarshalIndent(results, "", "  ")
+
 	if err != nil {
 		return "", err
 	}
+
 	return string(data), nil
 }
 
 func SendResult(context map[string]interface{}, status string, result map[string]interface{}, errors []map[string]interface{}, channel chan map[string]interface{}) {
+
 	context[constants.Status] = status
+
 	context[constants.Result] = result
+
 	context[constants.Error] = errors
+
 	channel <- context
 }

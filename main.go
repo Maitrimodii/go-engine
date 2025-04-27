@@ -15,40 +15,44 @@ func main() {
 		os.Exit(1)
 	}
 
-	contexts, err := utils.Decode(os.Args[1])
+	input, err := utils.Decode(os.Args[1])
 	if err != nil {
 		fmt.Printf("Failed to decode context: %v\n", err)
 		os.Exit(1)
 	}
 
-	channel := make(chan map[string]interface{}, len(contexts))
+	if len(input.Contexts) == 0 {
+		fmt.Println("No contexts provided")
+		os.Exit(1)
+	}
+
+	requestType := input.RequestType
+
+	if requestType != constants.Discovery && requestType != constants.Collect {
+
+		fmt.Printf("Invalid request type: %s\n", requestType)
+
+		os.Exit(1)
+	}
+
+	channel := make(chan map[string]interface{}, len(input.Contexts))
+
+	operation := ssh.Discovery
+
+	if requestType == constants.Collect {
+
+		operation = ssh.Collect
+
+	}
+
 	var wg sync.WaitGroup
 
-	for _, context := range contexts {
-		requestType, ok := context[constants.RequestType].(string)
-		if !ok {
-			fmt.Println("Missing request type")
-			continue
-		}
-
+	for _, context := range input.Contexts {
 		wg.Add(1)
-
-		switch requestType {
-		case constants.Discovery:
-			go func(ctx map[string]interface{}) {
-				defer wg.Done()
-				ssh.Discovery(ctx, channel)
-			}(context)
-		case constants.Collect:
-			go func(ctx map[string]interface{}) {
-				defer wg.Done()
-				ssh.Collect(ctx, channel)
-			}(context)
-		default:
-			fmt.Printf("Unknown request type: %s\n", requestType)
-			wg.Done()
-			continue
-		}
+		go func(ctx map[string]interface{}) {
+			defer wg.Done()
+			operation(ctx, channel)
+		}(context)
 	}
 
 	// Close channel after all goroutines finish

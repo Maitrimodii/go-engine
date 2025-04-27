@@ -16,4 +16,7 @@ const (
 	RequestType     = "request.type"
 	Collect         = "Collect"
 	Discovery       = "Discovery"
+	CredentialName  = "credential.name"
+	CredentialType  = "credential.type"
+	Credential      = "credential"
 )

@@ -25,23 +25,27 @@ func Collect(context map[string]interface{}, channel chan map[string]interface{}
 
 	sshClient.SetContext(context)
 
-	credentials, ok := context["credentials"].([]interface{})
+	rawCred := context[constants.Credential]
 
-	if !ok || len(credentials) == 0 {
+	credential, ok := rawCred.(map[string]interface{})
+
+	if !ok || len(credential) == 0 {
+
+		fmt.Println("entered here")
 
 		errorArray = append(errorArray, utils.ErrorHandler("INVALID_CREDENTIALS", "credentials missing or invalid"))
 
-		utils.SendResult(context, constants.Fail, result, errorArray, channel)
+		utils.SendResult(context, constants.Fail, nil, errorArray, channel)
 
 		return
 	}
 
-	_, _, err := sshClient.Connect(credentials)
+	_, _, err := sshClient.Connect(credential)
 	if err != nil {
 
 		errorArray = append(errorArray, utils.ErrorHandler(constants.CONNECTIONERROR, err.Error()))
 
-		utils.SendResult(context, constants.Fail, result, errorArray, channel)
+		utils.SendResult(context, constants.Fail, nil, errorArray, channel)
 
 		return
 	}

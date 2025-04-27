@@ -37,20 +37,30 @@ func (client *SSHClient) SetContext(context map[string]interface{}) {
 }
 
 // Connect tries each credential, returns the first successful connection
-func (client *SSHClient) Connect(credentials []interface{}) (interface{}, string, error) {
+func (client *SSHClient) Connect(credentials interface{}) (interface{}, string, error) {
 
-	for _, cred := range credentials {
+	var credList []interface{}
+
+	switch creds := credentials.(type) {
+	case map[string]interface{}:
+		credList = []interface{}{creds}
+	case []interface{}:
+		credList = creds
+	default:
+		client.logger.Error("Invalid credentials format: not a map or slice")
+		return nil, "", fmt.Errorf("invalid credentials format")
+	}
+
+	for _, cred := range credList {
 
 		credential, ok := cred.(map[string]interface{})
 
 		if !ok {
-
 			client.logger.Error("Invalid credential format")
-
 			continue
 		}
 
-		credType, _ := credential["credential.type"].(string)
+		credType, _ := credential[constants.CredentialType].(string)
 
 		if credType != "ssh" {
 
@@ -105,7 +115,7 @@ func (client *SSHClient) Connect(credentials []interface{}) (interface{}, string
 
 		retry := backoff.NewExponentialBackOff()
 
-		retry.MaxElapsedTime = 3 * client.timeout
+		retry.MaxElapsedTime = client.timeout
 
 		if err := backoff.Retry(operation, retry); err != nil {
 
@@ -119,7 +129,7 @@ func (client *SSHClient) Connect(credentials []interface{}) (interface{}, string
 
 		client.logger.Info(fmt.Sprintf("Connected to %s with username %s", address, username))
 
-		credName, _ := credential["credential.name"].(string)
+		credName, _ := credential[constants.CredentialName].(string)
 
 		return sshClient, credName, nil
 	}

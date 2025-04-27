@@ -58,7 +58,7 @@ func Discovery(context map[string]interface{}, channel chan map[string]interface
 		return
 	}
 
-	context["credential.name"] = credName
+	context[constants.CredentialName] = credName
 
 	result[constants.IP] = context[constants.IP]
 
